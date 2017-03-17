@@ -1,0 +1,22 @@
+{
+  "name": "@t2ee/deathstar",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "reflect-metadata": "^0.1.10",
+    "source-map-support": "^0.4.11",
+    "typescript": "^2.2.1"
+  },
+  "dependencies": {
+    "@types/koa": "^2.0.39",
+    "@types/node": "^7.0.8",
+    "koa": "^2.2.0"
+  }
+}
