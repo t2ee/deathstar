@@ -10,13 +10,13 @@ import {
 @Configurable('application')
 class DeathStarConfiguration {
     @ConfigField
-    port: number;    
+    public port: number;
 
     @ConfigField
-    log: boolean;
+    public log: boolean;
 
     @ConfigField
-    router: RouterConfiguration;
+    public router: RouterConfiguration;
 }
 
 export default DeathStarConfiguration;

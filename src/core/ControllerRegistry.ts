@@ -4,10 +4,10 @@ import {
 
 class ControllerRegistry {
     private static controllers: ClassConstructor<any>[] = [];
-    static put(klass: ClassConstructor<any>): void {
+    public static put(klass: ClassConstructor<any>): void {
         ControllerRegistry.controllers.push(klass);
     }
-    static list(): ClassConstructor<any>[] {
+    public static list(): ClassConstructor<any>[] {
         return ControllerRegistry.controllers;
     }
 }
