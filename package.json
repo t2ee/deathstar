@@ -21,6 +21,7 @@
     "@types/node": "^7.0.8",
     "chance": "^1.0.6",
     "ioredis": "^2.5.0",
-    "koa": "^2.2.0"
+    "koa": "^2.2.0",
+    "source-map-support": "^0.4.14"
   }
 }
