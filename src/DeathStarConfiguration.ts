@@ -5,6 +5,7 @@ import {
 import {
     RouterConfiguration,
 } from '@t2ee/vader';
+import DeathStarSessionConfig from './DeathStarSessionConfig';
 
 @Configurable('application')
 class DeathStarConfiguration {
@@ -16,6 +17,9 @@ class DeathStarConfiguration {
 
     @ConfigField
     public router: RouterConfiguration;
+
+    @ConfigField
+    public session: DeathStarSessionConfig;
 }
 
 export default DeathStarConfiguration;

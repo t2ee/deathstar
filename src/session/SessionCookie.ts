@@ -8,6 +8,7 @@ class SessionCookie {
     private _data: any;
     private _domain: string;
     private _deleted: boolean;
+    private _name: string;
 
     public constructor(id: string) {
         this._id = id;
@@ -65,9 +66,17 @@ class SessionCookie {
         this._domain = domain;
     }
 
+    public get name(): string {
+        return this._name;
+    }
+
+    public set name(name: string) {
+        this._name = name;
+    }
+
     public toString(): string {
         const components: string[] = [];
-        components.push(`TSESSION=${this._id}`);
+        components.push(`${this._name}=${this._id}`);
         if (this._path) {
             components.push(`Path=${this._path}`);
         }

@@ -24,7 +24,7 @@ abstract class SessionProvider {
             cookieComponents.set(key.trim(), (value || '').trim());
         }
 
-        const id: string = cookieComponents.get('TSESSION');
+        const id: string = cookieComponents.get(this.config.name);
         const data: any = await this.get(id);
         let cookie: SessionCookie = null;
         if (data) {
@@ -41,6 +41,8 @@ abstract class SessionProvider {
             cookie = new SessionCookie(this.chance.guid());
         }
 
+        cookie.name = this.config.name;
+
         return cookie;
     }
 
@@ -49,7 +51,7 @@ abstract class SessionProvider {
         if (cookie) {
             if (cookie.deleted) {
                 await this.delete(cookie.id);
-            } else {
+            } else if (cookie.data !== undefined) {
                 await this.set(cookie.id, cookie.data);
                 res.headers.set('Set-Cookie', cookie.toString());
             }

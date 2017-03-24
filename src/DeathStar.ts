@@ -26,6 +26,9 @@ import DeathStarConfiguration from './DeathStarConfiguration';
 import ControllerRegistry from './core/ControllerRegistry';
 import DeathStarProvider from './core/DeathStarProvider';
 import SessionCookie from './session/SessionCookie';
+import SessionProvider from './session/SessionProvider';
+import MemoryProvider from './session/MemoryProvider';
+import SessionManager from './session/SessionManager';
 
 
 @Injectable
@@ -39,6 +42,8 @@ class DeathStar {
 
     private run(): void {
         const logger: Logger = LogManager.getInstance().getLogger();
+
+        /*    LOAD CONTROLLERS    */
         const callerDirectory: string = MiscUtil.getCallerDirectory();
         const files: string[] = FileUtil.walk(callerDirectory).filter((file: string) => path.extname(file) === '.js');
         for (const file of files) {
@@ -55,6 +60,34 @@ class DeathStar {
             logger.info(`Autowired controller: ${controller.name}`);
             router.use(controller.class);
         }
+        /*    CONTROLLERS LOADED   */
+
+        if (this.configuration.session) {
+            const provider: string = this.configuration.session.provider;
+            if (!provider) {
+                logger.warn('Session Provider not specified, Session is disabled');
+            } else {
+                let providerInstance: SessionProvider;
+
+                if (provider === 'MemoryProvider') {
+                    providerInstance = new MemoryProvider(this.configuration.session);
+                } else {
+                    try {
+                        const providerFile: string = path.resolve(callerDirectory, 'node_modules', provider);
+                        const klass: Class<SessionProvider> = Class.forName<SessionProvider>(providerFile);
+                        providerInstance = klass.newInstance(this.configuration.session);
+                    } catch (e) {
+                        logger.warn(`Session Provider '${provider}' is not found, Session is disabled`);
+                    }
+                }
+
+                if (providerInstance) {
+                    SessionManager.use(providerInstance);
+                    logger.info(`Session is enabled, using ${providerInstance.constructor.name}`);
+                }
+            }
+        }
+
         app.use(router.routes());
         app.listen(this.configuration.port);
 
