@@ -10,6 +10,7 @@ import {
     Injectable,
     Container,
     ClassConstructor,
+    Class,
 } from '@t2ee/core';
 import {
     Router,
@@ -21,7 +22,7 @@ import {
     LogManager,
     Logger,
 } from 'sl4js';
-import DeathStartConfiguration from './DeathStarConfiguration';
+import DeathStarConfiguration from './DeathStarConfiguration';
 import ControllerRegistry from './core/ControllerRegistry';
 import DeathStarProvider from './core/DeathStarProvider';
 import SessionCookie from './session/SessionCookie';
@@ -31,7 +32,7 @@ import SessionCookie from './session/SessionCookie';
 class DeathStar {
 
     @AutoWired
-    private configuration: DeathStartConfiguration;
+    private configuration: DeathStarConfiguration;
 
     private static _customHandler: ClassConstructor<CustomHandler>;
     private _customHandler: ClassConstructor<CustomHandler>;
@@ -44,14 +45,15 @@ class DeathStar {
             require(file);
         }
 
-        const controllers: ClassConstructor<any>[] = ControllerRegistry.list();
+        const controllers: Class<any>[] = ControllerRegistry.list();
         const app: Koa = new Koa();
         const router: Router = RouterFactory.createRouter(this.configuration.router);
         router.customHandler = this._customHandler;
         router.provideContext(SessionCookie, (req: Request) => req.extra.get('cookie'));
 
         for (const controller of controllers) {
-            router.use(controller);
+            logger.info(`Autowired controller: ${controller.name}`);
+            router.use(controller.class);
         }
         app.use(router.routes());
         app.listen(this.configuration.port);

@@ -1,13 +1,13 @@
 import {
-    ClassConstructor,
+    Class,
 } from '@t2ee/core';
 
 class ControllerRegistry {
-    private static controllers: ClassConstructor<any>[] = [];
-    public static put(klass: ClassConstructor<any>): void {
+    private static controllers: Class<any>[] = [];
+    public static put(klass: Class<any>): void {
         ControllerRegistry.controllers.push(klass);
     }
-    public static list(): ClassConstructor<any>[] {
+    public static list(): Class<any>[] {
         return ControllerRegistry.controllers;
     }
 }

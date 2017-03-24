@@ -1,6 +1,5 @@
 import {
     Configurable,
-    ConfigStore,
     ConfigField,
 } from '@t2ee/configurable';
 import {
