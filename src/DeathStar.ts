@@ -15,6 +15,7 @@ import {
     Router,
     RouterFactory,
     Request,
+    CustomHandler,
 } from '@t2ee/vader';
 import {
     LogManager,
@@ -32,6 +33,9 @@ class DeathStar {
     @AutoWired
     private configuration: DeathStartConfiguration;
 
+    private static _customHandler: ClassConstructor<CustomHandler>;
+    private _customHandler: ClassConstructor<CustomHandler>;
+
     private run(): void {
         const logger: Logger = LogManager.getInstance().getLogger();
         const callerDirectory: string = MiscUtil.getCallerDirectory();
@@ -43,6 +47,7 @@ class DeathStar {
         const controllers: ClassConstructor<any>[] = ControllerRegistry.list();
         const app: Koa = new Koa();
         const router: Router = RouterFactory.createRouter(this.configuration.router);
+        router.customHandler = this._customHandler;
         router.provideContext(SessionCookie, (req: Request) => req.extra.get('cookie'));
 
         for (const controller of controllers) {
@@ -61,7 +66,16 @@ class DeathStar {
         const top: string = MiscUtil.getCallerDirectory();
         ConfigStore.setRoot(path.resolve(top, '../config'));
         const star: DeathStar = Container.get(DeathStar, new DeathStarProvider());
+        star.customHandler = DeathStar._customHandler;
         star.run();
+    }
+
+    public set customHandler(handler: ClassConstructor<CustomHandler>) {
+        this._customHandler = handler;
+    }
+
+    public static set customHandler(handler: ClassConstructor<CustomHandler>) {
+        DeathStar._customHandler = handler;
     }
 }
 
