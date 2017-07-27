@@ -1,7 +1,5 @@
 import {
-    Injectable,
-    Class,
-    MiscUtil,
+    Component,
 } from '@t2ee/core';
 import {
     BeforeMiddleware,
@@ -28,11 +26,15 @@ const afterMiddleware: AfterMiddleware = async (res: Response): Promise<Response
 
 function ControllerDecorator(): (target: any) => any {
     return (target: any): any => {
-        const file: string = MiscUtil.gtetCallerFile();
-        ControllerRegistry.put(Class.fromPrototype(target, file));
-        Injectable(target);
-        Before(beforeMiddleware)(target);
-        After(afterMiddleware)(target);
+        Component(target);
+        if (SessionManager.getProvider()) {
+            Before(beforeMiddleware)(target);
+            After(afterMiddleware)(target);
+        }
+
+        ControllerRegistry.put(target);
+
+        //return target;
     };
 }
 

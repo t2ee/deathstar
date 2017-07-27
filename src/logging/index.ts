@@ -5,11 +5,10 @@ export {
     Configuration,
     ConsoleAppenderConfiguration,
     FileAppenderConfiguration,
-    RootConfiguration,
     Appender,
     Layout,
     LogLevel,
     LogManager,
     Logger,
     PatternLayout,
-} from 'sl4js';
+} from '@t2ee/sl4js';

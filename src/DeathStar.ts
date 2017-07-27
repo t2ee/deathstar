@@ -1,116 +1,146 @@
 import * as Koa from 'koa';
 import * as path from 'path';
 import {
-    ConfigStore,
-} from '@t2ee/configurable';
-import {
     MiscUtil,
     FileUtil,
     AutoWired,
-    Injectable,
+    Component,
     Container,
     ClassConstructor,
+    ConfigurationStore,
     Class,
 } from '@t2ee/core';
 import {
     Router,
-    RouterFactory,
     Request,
-    CustomHandler,
+    BeforeMiddleware,
+    AfterMiddleware,
 } from '@t2ee/vader';
 import {
     LogManager,
     Logger,
-} from 'sl4js';
+} from '@t2ee/sl4js';
 import DeathStarConfiguration from './DeathStarConfiguration';
 import ControllerRegistry from './core/ControllerRegistry';
-import DeathStarProvider from './core/DeathStarProvider';
+import ContextProviderRegistry from './core/ContextProviderRegistry';
+import ContextProvider from './core/ContextProvider';
 import SessionCookie from './session/SessionCookie';
 import SessionProvider from './session/SessionProvider';
 import MemoryProvider from './session/MemoryProvider';
 import SessionManager from './session/SessionManager';
+import Runnable from './core/Runnable';
 
 
-@Injectable
+@Component
 class DeathStar {
 
     @AutoWired
     private configuration: DeathStarConfiguration;
 
-    private static _customHandler: ClassConstructor<CustomHandler>;
-    private _customHandler: ClassConstructor<CustomHandler>;
-
-    private run(): void {
-        const logger: Logger = LogManager.getInstance().getLogger();
+    private run(target?: ClassConstructor<Runnable>): void {
+        const logger: Logger = LogManager.getLogger();
 
         /*    LOAD CONTROLLERS    */
         const callerDirectory: string = MiscUtil.getCallerDirectory();
+        const callerFile: string = MiscUtil.gtetCallerFile();
         const files: string[] = FileUtil.walk(callerDirectory).filter((file: string) => path.extname(file) === '.js');
         for (const file of files) {
+            if (file === callerFile) {
+                continue;
+            }
             require(file);
         }
 
-        const controllers: Class<any>[] = ControllerRegistry.list();
-        const app: Koa = new Koa();
-        const router: Router = RouterFactory.createRouter(this.configuration.router);
-        router.customHandler = this._customHandler;
-        router.provideContext(SessionCookie, (req: Request) => req.extra.get('cookie'));
+        if (target) {
+            const instance: Runnable = Container.get(target);
+            instance.run();
+            logger.info(`Successfully bootstrapped ${target.name}`);
+        } else {
+            const controllers: ClassConstructor<any>[] = ControllerRegistry.list();
+            const app: Koa = new Koa();
+            const router: Router = Container.get(Router);
+            const contextProviders: Map<ClassConstructor<any>, ClassConstructor<ContextProvider<any>>>
+                = ContextProviderRegistry.list();
 
-        for (const controller of controllers) {
-            logger.info(`Autowired controller: ${controller.name}`);
-            router.use(controller.class);
-        }
-        /*    CONTROLLERS LOADED   */
+            for (const [klass, contextProvider] of contextProviders.entries()) {
+                const provider: ContextProvider<any> = Container.get(contextProvider);
+                router.provideContext(klass, provider.provide);
+            }
 
-        if (this.configuration.session) {
-            const provider: string = this.configuration.session.provider;
-            if (!provider) {
-                logger.warn('Session Provider not specified, Session is disabled');
-            } else {
-                let providerInstance: SessionProvider;
+            router.provideContext(SessionCookie, (req: Request) => req.extra.get('cookie'));
 
-                if (provider === 'MemoryProvider') {
-                    providerInstance = new MemoryProvider(this.configuration.session);
+            let befores: BeforeMiddleware | BeforeMiddleware[] = <any> Container.get('DeathStarBefore') || [];
+            let afters: AfterMiddleware | AfterMiddleware[] = <any> Container.get('DeathStarAfter') || [];
+
+            if (!Array.isArray(befores)) {
+                befores = [befores];
+            }
+
+            if (!Array.isArray(afters)) {
+                afters = [afters];
+            }
+
+            router.use(befores, afters);
+
+            for (const controller of controllers) {
+                logger.info(`Autowired controller: ${controller.name}`);
+                router.use(controller);
+            }
+            /*    CONTROLLERS LOADED   */
+
+
+            if (this.configuration.session) {
+                const provider: string = this.configuration.session.provider;
+                if (!provider) {
+                    logger.warn('Session Provider not specified, Session is disabled');
                 } else {
-                    try {
-                        const providerFile: string = path.resolve(callerDirectory, 'node_modules', provider);
-                        const klass: Class<SessionProvider> = Class.forName<SessionProvider>(providerFile);
-                        providerInstance = klass.newInstance(this.configuration.session);
-                    } catch (e) {
-                        logger.warn(`Session Provider '${provider}' is not found, Session is disabled`);
+                    let providerInstance: SessionProvider;
+
+                    if (provider === 'MemoryProvider') {
+                        providerInstance = new MemoryProvider(this.configuration.session);
+                    } else {
+                        try {
+                            const providerFile: string = path.resolve(callerDirectory, 'node_modules', provider);
+                            const klass: Class<SessionProvider> = Class.forName<SessionProvider>(providerFile);
+                            providerInstance = klass.newInstance(this.configuration.session);
+                        } catch (e) {
+                            logger.warn(`Session Provider '${provider}' is not found, Session is disabled`);
+                        }
+                    }
+
+                    if (providerInstance) {
+                        SessionManager.use(providerInstance);
+                        logger.info(`Session is enabled, using ${providerInstance.constructor.name}`);
                     }
                 }
-
-                if (providerInstance) {
-                    SessionManager.use(providerInstance);
-                    logger.info(`Session is enabled, using ${providerInstance.constructor.name}`);
-                }
             }
-        }
 
-        app.use(router.routes());
-        app.listen(this.configuration.port);
-
-
-        if (this.configuration.log) {
-            logger.info(`SERVER STARTED ON PORT ${this.configuration.port}`);
+            app.use(router.routes());
+            app.listen(this.configuration.port, () => {
+                logger.info(`SERVER STARTED ON PORT ${this.configuration.port}`);
+            });
         }
     }
 
-    public static launch(): void {
-        const top: string = MiscUtil.getCallerDirectory();
-        ConfigStore.setRoot(path.resolve(top, '../config'));
-        const star: DeathStar = Container.get(DeathStar, new DeathStarProvider());
-        star.customHandler = DeathStar._customHandler;
-        star.run();
-    }
-
-    public set customHandler(handler: ClassConstructor<CustomHandler>) {
-        this._customHandler = handler;
-    }
-
-    public static set customHandler(handler: ClassConstructor<CustomHandler>) {
-        DeathStar._customHandler = handler;
+    public static launch(target: ClassConstructor<Runnable>): void;
+    public static launch(): void;
+    public static launch(target?: ClassConstructor<Runnable>): void {
+        ConfigurationStore.loadFile(
+            path.resolve(
+                MiscUtil.getCallerDirectory(),
+                '../config/application',
+            ),
+            process.env.ENV,
+        );
+        ConfigurationStore.loadFile(
+            path.resolve(
+                MiscUtil.getCallerDirectory(),
+                '../config/logger',
+            ),
+            process.env.ENV,
+        );
+        const star: DeathStar = Container.get(DeathStar);
+        star.run(target);
     }
 }
 

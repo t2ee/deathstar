@@ -1,24 +1,15 @@
 import {
-    Configurable,
-    ConfigField,
-} from '@t2ee/configurable';
-import {
-    RouterConfiguration,
-} from '@t2ee/vader';
+    Component,
+    Value,
+} from '@t2ee/core';
 import DeathStarSessionConfig from './DeathStarSessionConfig';
 
-@Configurable('application')
+@Component
 class DeathStarConfiguration {
-    @ConfigField
+    @Value('server.port')
     public port: number;
 
-    @ConfigField
-    public log: boolean;
-
-    @ConfigField
-    public router: RouterConfiguration;
-
-    @ConfigField
+    @Value('server.session')
     public session: DeathStarSessionConfig;
 }
 
